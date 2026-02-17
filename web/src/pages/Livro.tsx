@@ -4,6 +4,10 @@ import { useNavigate } from "react-router-dom";
 import { ROUTE_PATHS } from "@/lib/index";
 import { supabase } from "@/lib/supabase";
 
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
+import remarkBreaks from "remark-breaks";
+
 type Msg = { role: "user" | "assistant"; text: string };
 
 export default function Livro() {
@@ -121,15 +125,18 @@ export default function Livro() {
       }
 
       // 3.2) Liberar e-mail (cria entitlement)
-const { error: insErr } = await supabase
-  .from("ebook_entitlements")
-  .insert({ email });
+      const { error: insErr } = await supabase
+        .from("ebook_entitlements")
+        .insert({ email });
 
-// Se já existir, ótimo: seguimos como liberado
-if (insErr && String(insErr.message || "").toLowerCase().includes("duplicate")) {
-  setHasEntitlement(true);
-  return;
-}
+      // Se já existir, ótimo: seguimos como liberado
+      if (
+        insErr &&
+        String(insErr.message || "").toLowerCase().includes("duplicate")
+      ) {
+        setHasEntitlement(true);
+        return;
+      }
 
       if (insErr) {
         // Se RLS bloquear INSERT/UPSERT, cai aqui
@@ -164,12 +171,18 @@ if (insErr && String(insErr.message || "").toLowerCase().includes("duplicate")) 
 
       setMessages((prev) => [
         ...prev,
-        { role: "assistant", text: data?.text || "Não consegui obter resposta do servidor." },
+        {
+          role: "assistant",
+          text: data?.text || "Não consegui obter resposta do servidor.",
+        },
       ]);
     } catch {
       setMessages((prev) => [
         ...prev,
-        { role: "assistant", text: "Falha de conexão com o servidor. Tente novamente." },
+        {
+          role: "assistant",
+          text: "Falha de conexão com o servidor. Tente novamente.",
+        },
       ]);
     } finally {
       setSending(false);
@@ -202,18 +215,23 @@ if (insErr && String(insErr.message || "").toLowerCase().includes("duplicate")) 
 
         <div className="mt-6 rounded-xl border bg-card p-5">
           <p className="text-sm">
-            Para acessar o agente, digite abaixo o <span className="font-semibold">código do e-book</span>.
+            Para acessar o agente, digite abaixo o{" "}
+            <span className="font-semibold">código do e-book</span>.
           </p>
 
           <div className="mt-4">
-            <label className="text-xs font-medium text-muted-foreground">Seu e-mail (logado)</label>
+            <label className="text-xs font-medium text-muted-foreground">
+              Seu e-mail (logado)
+            </label>
             <div className="mt-1 rounded-lg border px-3 py-2 text-sm bg-muted/30">
               {email || "(não encontrado)"}
             </div>
           </div>
 
           <div className="mt-4">
-            <label className="text-xs font-medium text-muted-foreground">Código do e-book</label>
+            <label className="text-xs font-medium text-muted-foreground">
+              Código do e-book
+            </label>
             <input
               className="mt-1 w-full rounded-lg border px-3 py-2 text-sm"
               placeholder="Digite o código do e-book"
@@ -224,9 +242,7 @@ if (insErr && String(insErr.message || "").toLowerCase().includes("duplicate")) 
               }}
               disabled={submittingCode}
             />
-            {codeError && (
-              <p className="mt-2 text-sm text-red-600">{codeError}</p>
-            )}
+            {codeError && <p className="mt-2 text-sm text-red-600">{codeError}</p>}
           </div>
 
           <button
@@ -239,7 +255,8 @@ if (insErr && String(insErr.message || "").toLowerCase().includes("duplicate")) 
         </div>
 
         <p className="mt-4 text-xs text-muted-foreground">
-          Se você comprou o e-book e está com o código, mas ainda não conseguiu liberar, me envie o seu e-mail acima.
+          Se você comprou o e-book e está com o código, mas ainda não conseguiu
+          liberar, me envie o seu e-mail acima.
         </p>
       </div>
     );
@@ -264,7 +281,31 @@ if (insErr && String(insErr.message || "").toLowerCase().includes("duplicate")) 
                 m.role === "user" ? "bg-primary text-primary-foreground" : "bg-muted"
               }`}
             >
-              {m.text}
+              {m.role === "assistant" ? (
+                <div className="leading-relaxed">
+                  <ReactMarkdown
+                    remarkPlugins={[remarkGfm, remarkBreaks]}
+                    components={{
+                      p: ({ children }) => <p className="mb-3 last:mb-0">{children}</p>,
+                      ul: ({ children }) => <ul className="list-disc pl-5 mb-3 last:mb-0">{children}</ul>,
+                      ol: ({ children }) => <ol className="list-decimal pl-5 mb-3 last:mb-0">{children}</ol>,
+                      li: ({ children }) => <li className="mb-1">{children}</li>,
+                      h3: ({ children }) => <h3 className="font-semibold text-base mt-3 mb-2">{children}</h3>,
+                      h2: ({ children }) => <h2 className="font-semibold text-lg mt-3 mb-2">{children}</h2>,
+                      h1: ({ children }) => <h1 className="font-semibold text-xl mt-3 mb-2">{children}</h1>,
+                      strong: ({ children }) => <strong>{children}</strong>,
+                      em: ({ children }) => <em>{children}</em>,
+                      code: ({ children }) => (
+                        <code className="px-1 py-0.5 rounded bg-black/5">{children}</code>
+                      ),
+                    }}
+                  >
+                    {m.text ?? ""}
+                  </ReactMarkdown>
+                </div>
+              ) : (
+                <div className="whitespace-pre-wrap">{m.text}</div>
+              )}
             </div>
           </div>
         ))}
