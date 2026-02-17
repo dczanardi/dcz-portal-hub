@@ -98,4 +98,8 @@ Thumbs.db
 
 # --- Uploaded Files ---
 uploaded_files/
+# Não versionar arquivos compactados
+*.zip
+*.rar
+*.7z
 
