@@ -130,7 +130,7 @@ export default function Home() {
         <div className="container mx-auto px-4 text-center">
           <div className="max-w-xl mx-auto">
             <div className="w-12 h-1 bg-primary mx-auto mb-8 rounded-full" />
-            <p className="italic text-lg text-muted-foreground font-medium">"A educação não é prencher baldes, mas acender chamas."</p>
+            <p className="italic text-lg text-muted-foreground font-medium">"A boa educação não transfere conhecimento: conduz à sabedoria."</p>
             <span className="block mt-4 text-sm font-semibold tracking-widest uppercase">
               © 2026 DCZ Pensando Educação
             </span>
