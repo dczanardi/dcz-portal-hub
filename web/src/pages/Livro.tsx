@@ -3,6 +3,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useNavigate } from "react-router-dom";
 import { ROUTE_PATHS } from "@/lib/index";
 import { supabase } from "@/lib/supabase";
+import { EBOOK_DRIVE_FOLDER } from "@/lib/ebookMaterials";
 
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
@@ -14,7 +15,6 @@ export default function Livro() {
   const { isAuthenticated, isLoading } = useAuth();
   const navigate = useNavigate();
 
-  // ----- Entitlement (código do e-book) -----
   const [email, setEmail] = useState<string>("");
   const [hasEntitlement, setHasEntitlement] = useState<boolean | null>(null);
   const [code, setCode] = useState<string>("");
@@ -22,13 +22,9 @@ export default function Livro() {
   const [submittingCode, setSubmittingCode] = useState<boolean>(false);
   const [codeError, setCodeError] = useState<string>("");
 
-  // ----- Chat -----
   const [input, setInput] = useState("");
   const [messages, setMessages] = useState<Msg[]>([
-    {
-      role: "assistant",
-      text: "Olá! Pode enviar a sua dúvida sobre o e-book.",
-    },
+    { role: "assistant", text: "Olá! Pode enviar a sua dúvida sobre o e-book." },
   ]);
   const [sending, setSending] = useState(false);
 
@@ -37,7 +33,6 @@ export default function Livro() {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
-  // 1) Proteção: se não estiver logado, manda para login
   useEffect(() => {
     if (!isLoading && !isAuthenticated) {
       localStorage.setItem("dczhub_postLoginTarget", "/livro");
@@ -46,7 +41,6 @@ export default function Livro() {
     }
   }, [isAuthenticated, isLoading, navigate]);
 
-  // 2) Ao ficar logado, pega e-mail e checa entitlement
   useEffect(() => {
     async function loadAndCheck() {
       if (isLoading) return;
@@ -75,7 +69,6 @@ export default function Livro() {
           .maybeSingle();
 
         if (error) {
-          // Pode acontecer se RLS bloquear leitura. Trata como "não liberado".
           setHasEntitlement(false);
           return;
         }
@@ -89,7 +82,6 @@ export default function Livro() {
     loadAndCheck();
   }, [isAuthenticated, isLoading]);
 
-  // 3) Enviar código: valida em ebook_access_codes e libera o e-mail
   async function submitCode() {
     const normalized = code.trim();
     if (!normalized) {
@@ -101,7 +93,6 @@ export default function Livro() {
     setCodeError("");
 
     try {
-      // 3.1) Validar o código (tem que existir e estar ativo)
       const { data: codeRow, error: codeErr } = await supabase
         .from("ebook_access_codes")
         .select("code, is_active")
@@ -124,12 +115,10 @@ export default function Livro() {
         return;
       }
 
-      // 3.2) Liberar e-mail (cria entitlement)
       const { error: insErr } = await supabase
         .from("ebook_entitlements")
         .insert({ email });
 
-      // Se já existir, ótimo: seguimos como liberado
       if (
         insErr &&
         String(insErr.message || "").toLowerCase().includes("duplicate")
@@ -139,7 +128,6 @@ export default function Livro() {
       }
 
       if (insErr) {
-        // Se RLS bloquear INSERT/UPSERT, cai aqui
         setCodeError(
           "Seu código está correto, mas o sistema não conseguiu liberar seu acesso (bloqueio de permissão)."
         );
@@ -189,7 +177,6 @@ export default function Livro() {
     }
   }
 
-  // Enquanto checa entitlement (logo após login)
   if (isAuthenticated && checkingEntitlement) {
     return (
       <div className="mx-auto max-w-2xl px-4 py-10">
@@ -204,7 +191,6 @@ export default function Livro() {
     );
   }
 
-  // Se estiver logado, mas ainda NÃO tiver entitlement: pede o código
   if (isAuthenticated && hasEntitlement === false) {
     return (
       <div className="mx-auto max-w-2xl px-4 py-10">
@@ -262,13 +248,29 @@ export default function Livro() {
     );
   }
 
-  // Se estiver liberado, mostra o chat normal
   return (
     <div className="mx-auto max-w-3xl px-4 py-8">
       <h1 className="text-2xl font-semibold">PERGUNTE AO AGENTE IA DO EBOOK</h1>
+
       <p className="text-sm text-muted-foreground mt-1">
         Eu vou responder com base no conteúdo do e-book.
       </p>
+
+      <div className="mt-6 rounded-xl border bg-card p-4">
+        <h2 className="text-lg font-semibold">{EBOOK_DRIVE_FOLDER.title}</h2>
+        <p className="text-sm text-muted-foreground mt-1">
+          {EBOOK_DRIVE_FOLDER.description}
+        </p>
+
+        <a
+          href={EBOOK_DRIVE_FOLDER.url}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="mt-4 inline-flex items-center justify-center rounded-lg border px-4 py-2 text-sm font-semibold hover:bg-muted/30 transition"
+        >
+          Abrir pasta no Google Drive
+        </a>
+      </div>
 
       <div className="mt-6 rounded-xl border bg-card p-4 h-[60vh] overflow-auto">
         {messages.map((m, i) => (
